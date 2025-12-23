@@ -2,6 +2,14 @@ import argparse
 from pathlib import Path
 import sys
 
+try:
+    from PIL import Image
+except ImportError:
+    sys.exit(
+        "Missing dependency: Pillow is required to load input images. "
+        "Install it (e.g., `pip install pillow`) and re-run."
+    )
+
 
 def load_prompt(view: str) -> str:
     root = Path(__file__).resolve().parent.parent
@@ -46,12 +54,30 @@ def main() -> None:
     prompt_text = load_prompt(args.view)
     config = load_config()
 
+    image_path = Path(args.input_path)
+    if not image_path.is_file():
+        sys.exit(f"Input image not found: {image_path}")
+    try:
+        with Image.open(image_path) as img:
+            img.load()
+            image_info = {
+                "filename": image_path.name,
+                "format": img.format,
+                "mode": img.mode,
+                "size": f"{img.width} x {img.height}",
+            }
+    except OSError as exc:
+        sys.exit(f"Failed to open image '{image_path}': {exc}")
+
     print(f"Input: {args.input_path}")
     print(f"View: {args.view}")
     print("Prompt:")
     print(prompt_text)
     print("Configuration:")
     print(config)
+    print("Image:")
+    for key, value in image_info.items():
+        print(f"  {key}: {value}")
 
 
 if __name__ == "__main__":
