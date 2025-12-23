@@ -14,7 +14,7 @@ def _resolve_resolution(config: dict) -> int:
     return resolution
 
 
-def generate(image_path, prompt, config, output_path):
+def _placeholder_generate(image_path, prompt, config, output_path):
     # prompt is accepted for future use; unused in placeholder implementation
     _ = prompt
 
@@ -42,3 +42,14 @@ def generate(image_path, prompt, config, output_path):
         output_path = Path(output_path)
         canvas.convert("RGB").save(output_path, format="PNG")
         return output_path
+
+
+def generate(image_path, prompt, config, output_path):
+    backend = config.get("backend", "placeholder") if isinstance(config, dict) else "placeholder"
+    if backend == "placeholder":
+        return _placeholder_generate(image_path, prompt, config, output_path)
+    if backend == "dalle":
+        from pipelines.adapters import dalle
+
+        return dalle.generate(image_path, prompt, config, output_path)
+    raise ValueError(f"Unsupported backend: {backend}")
