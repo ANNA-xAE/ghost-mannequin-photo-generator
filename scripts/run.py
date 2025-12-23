@@ -2,6 +2,9 @@ import argparse
 from pathlib import Path
 import sys
 
+DEFAULT_MODE = "preview"
+ROOT = Path(__file__).resolve().parent.parent
+
 try:
     from PIL import Image
 except ImportError:
@@ -12,16 +15,14 @@ except ImportError:
 
 
 def load_prompt(view: str) -> str:
-    root = Path(__file__).resolve().parent.parent
-    prompt_path = root / "prompts" / f"{view}.md"
+    prompt_path = ROOT / "prompts" / f"{view}.md"
     if not prompt_path.is_file():
         sys.exit(f"Prompt file not found for view '{view}': {prompt_path}")
     return prompt_path.read_text(encoding="utf-8")
 
 
 def load_config() -> dict:
-    root = Path(__file__).resolve().parent.parent
-    config_path = root / "configs" / "defaults.yaml"
+    config_path = ROOT / "configs" / "defaults.yaml"
     if not config_path.is_file():
         sys.exit(f"Configuration file missing: {config_path}")
     try:
@@ -54,6 +55,10 @@ def main() -> None:
     prompt_text = load_prompt(args.view)
     config = load_config()
 
+    mode = config.get("mode", DEFAULT_MODE) if isinstance(config, dict) else DEFAULT_MODE
+    if mode not in {"preview", "generate"}:
+        sys.exit(f"Unsupported execution mode: {mode}")
+
     image_path = Path(args.input_path)
     if not image_path.is_file():
         sys.exit(f"Input image not found: {image_path}")
@@ -75,9 +80,17 @@ def main() -> None:
     print(prompt_text)
     print("Configuration:")
     print(config)
+    print(f"Mode: {mode}")
     print("Image:")
     for key, value in image_info.items():
         print(f"  {key}: {value}")
+
+    if mode == "preview":
+        print("Preview mode: no output will be written.")
+    else:
+        output_dir = ROOT / "data" / "output" / image_path.stem / args.view
+        output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Output directory: {output_dir}")
 
 
 if __name__ == "__main__":
