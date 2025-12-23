@@ -1,0 +1,15 @@
+# Default generation parameters
+# These values are intentionally conservative.
+
+resolution: 2048
+aspect_ratio: "1:1"
+
+img2img:
+  denoise_strength: 0.25
+  steps: 30
+  guidance_scale: 5.0
+
+constraints:
+  preserve_geometry: true
+  preserve_color: true
+  allow_symmetry_fix: false
