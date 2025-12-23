@@ -2,6 +2,8 @@ import argparse
 from pathlib import Path
 import sys
 
+from pipelines.generator import generate
+
 DEFAULT_MODE = "preview"
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -105,25 +107,11 @@ def main() -> None:
         output_dir = ROOT / "data" / "output" / image_path.stem / args.view
         output_dir.mkdir(parents=True, exist_ok=True)
         print(f"Output directory: {output_dir}")
+        output_path = output_dir / "output.png"
         try:
-            with Image.open(image_path) as img:
-                img.load()
-                scale = min(resolution / img.width, resolution / img.height, 1)
-                new_size = (int(img.width * scale), int(img.height * scale))
-                resized = img.convert("RGBA")
-                if scale < 1:
-                    resized = resized.resize(new_size, Image.LANCZOS)
-
-                canvas = Image.new("RGBA", (resolution, resolution), "white")
-                offset = (
-                    (resolution - resized.width) // 2,
-                    (resolution - resized.height) // 2,
-                )
-                canvas.paste(resized, offset, resized)
-                output_path = output_dir / "output.png"
-                canvas.convert("RGB").save(output_path, format="PNG")
-                print(f"Saved: {output_path}")
-        except OSError as exc:
+            saved_path = generate(image_path, prompt_text, config, output_path)
+            print(f"Saved: {saved_path}")
+        except Exception as exc:
             sys.exit(f"Failed to generate output: {exc}")
 
 
