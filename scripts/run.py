@@ -41,6 +41,19 @@ def load_config() -> dict:
     return data
 
 
+def resolve_resolution(config: dict) -> int:
+    value = config.get("resolution") if isinstance(config, dict) else None
+    if value is None:
+        sys.exit("Configuration missing required key: resolution")
+    try:
+        resolution = int(value)
+    except (TypeError, ValueError):
+        sys.exit(f"Invalid resolution value: {value}")
+    if resolution <= 0:
+        sys.exit(f"Resolution must be positive: {resolution}")
+    return resolution
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ghost mannequin prompt viewer")
     parser.add_argument("--input", required=True, dest="input_path", help="Path to source image")
@@ -58,6 +71,7 @@ def main() -> None:
     mode = config.get("mode", DEFAULT_MODE) if isinstance(config, dict) else DEFAULT_MODE
     if mode not in {"preview", "generate"}:
         sys.exit(f"Unsupported execution mode: {mode}")
+    resolution = resolve_resolution(config)
 
     image_path = Path(args.input_path)
     if not image_path.is_file():
@@ -86,11 +100,31 @@ def main() -> None:
         print(f"  {key}: {value}")
 
     if mode == "preview":
-        print("Preview mode: no output will be written.")
+        print(f"Preview mode: would create {resolution}x{resolution} canvas and write output.png.")
     else:
         output_dir = ROOT / "data" / "output" / image_path.stem / args.view
         output_dir.mkdir(parents=True, exist_ok=True)
         print(f"Output directory: {output_dir}")
+        try:
+            with Image.open(image_path) as img:
+                img.load()
+                scale = min(resolution / img.width, resolution / img.height, 1)
+                new_size = (int(img.width * scale), int(img.height * scale))
+                resized = img.convert("RGBA")
+                if scale < 1:
+                    resized = resized.resize(new_size, Image.LANCZOS)
+
+                canvas = Image.new("RGBA", (resolution, resolution), "white")
+                offset = (
+                    (resolution - resized.width) // 2,
+                    (resolution - resized.height) // 2,
+                )
+                canvas.paste(resized, offset, resized)
+                output_path = output_dir / "output.png"
+                canvas.convert("RGB").save(output_path, format="PNG")
+                print(f"Saved: {output_path}")
+        except OSError as exc:
+            sys.exit(f"Failed to generate output: {exc}")
 
 
 if __name__ == "__main__":
